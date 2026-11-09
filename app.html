@@ -1,0 +1,1554 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EstateEase - Property & Rent Management (Landlord & Tenant)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printable-receipt-modal, #printable-receipt-modal * { visibility: visible; }
+      #printable-receipt-modal { position: absolute; left: 0; top: 0; width: 100%; border: none !important; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100/70 text-slate-900 font-sans antialiased min-h-screen flex flex-col">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="bg-slate-900 text-white sticky top-0 z-40 border-b border-slate-800 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo -->
+        <div class="flex items-center space-x-3">
+          <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <i data-lucide="building-2" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <div class="font-bold text-lg tracking-tight flex items-center gap-2">
+              EstateEase
+              <span id="role-pill" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                Landlord & Father
+              </span>
+            </div>
+            <p class="text-xs text-slate-400">Shanti Niwas & Commercial Plaza</p>
+          </div>
+        </div>
+
+        <!-- Role Toggle & Supabase Cloud Status -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button
+            onclick="openSupabaseModal()"
+            id="supabase-status-pill"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 transition cursor-pointer"
+            title="Configure Supabase Cloud Database"
+          >
+            <i data-lucide="cloud" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span id="supabase-pill-text">Supabase Cloud</span>
+          </button>
+
+          <button
+            onclick="toggleRoleMode()"
+            class="inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition"
+          >
+            <i data-lucide="arrow-right-left" class="w-3.5 h-3.5 text-blue-400"></i>
+            <span id="toggle-role-btn-text">Switch to Tenant Portal</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Landlord Sub Navigation Tabs -->
+      <nav id="landlord-subnav" class="flex space-x-2 sm:space-x-4 overflow-x-auto py-2 border-t border-slate-800/80 text-sm font-medium">
+        <button onclick="switchTab('overview')" id="tab-overview-btn" class="px-3 py-1.5 rounded-md flex items-center gap-1.5 bg-blue-600 text-white transition">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+          <span>Overview</span>
+        </button>
+        <button onclick="switchTab('properties')" id="tab-properties-btn" class="px-3 py-1.5 rounded-md flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="building" class="w-4 h-4"></i>
+          <span>Flats & Shops</span>
+        </button>
+        <button onclick="switchTab('payments')" id="tab-payments-btn" class="px-3 py-1.5 rounded-md flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800 transition">
+          <i data-lucide="credit-card" class="w-4 h-4"></i>
+          <span>Payment Tracker</span>
+        </button>
+        <button onclick="switchTab('reminders')" id="tab-reminders-btn" class="px-3 py-1.5 rounded-md flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800 transition relative">
+          <i data-lucide="bell" class="w-4 h-4"></i>
+          <span>3-Day Reminders</span>
+          <span id="badge-reminders-count" class="ml-1 px-1.5 py-0.2 rounded-full text-xs bg-amber-500 text-slate-900 font-bold hidden">0</span>
+        </button>
+        <button onclick="switchTab('tickets')" id="tab-tickets-btn" class="px-3 py-1.5 rounded-md flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800 transition relative">
+          <i data-lucide="wrench" class="w-4 h-4"></i>
+          <span>Maintenance</span>
+          <span id="badge-tickets-count" class="ml-1 px-1.5 py-0.2 rounded-full text-xs bg-rose-500 text-white font-bold hidden">0</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 flex-1 w-full">
+
+    <!-- ======================================================== -->
+    <!-- VIEW 1: LANDLORD & FATHER DASHBOARD                     -->
+    <!-- ======================================================== -->
+    <div id="landlord-view" class="space-y-8">
+
+      <!-- SECTION: OVERVIEW TAB -->
+      <div id="section-overview" class="space-y-6">
+        <!-- Supabase Cloud Live Sync Banner -->
+        <div id="supabase-cloud-banner" class="bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-900 text-white p-5 rounded-3xl border border-emerald-500/30 shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-center gap-3.5">
+            <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-2xl border border-emerald-500/30">
+              <i data-lucide="database" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-sm tracking-tight">Supabase PostgreSQL Cloud Active</span>
+                <span class="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-bold uppercase tracking-wider">Live Cloud</span>
+              </div>
+              <p class="text-xs text-slate-300 mt-1">
+                All views, properties, payments, and tickets fetch directly from cloud tables:
+                <span class="inline-flex gap-1.5 font-mono text-[11px] text-emerald-400 font-semibold">
+                  <code>properties</code> • <code>tenants</code> • <code>payments</code> • <code>issues</code>
+                </span>
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 self-start md:self-auto">
+            <button onclick="seedSupabaseData()" id="btn-seed-cloud" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>Seed Cloud Data</span>
+            </button>
+            <button onclick="openSupabaseModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs transition flex items-center gap-1.5">
+              <i data-lucide="settings" class="w-3.5 h-3.5 text-blue-400"></i>
+              <span>Cloud Config</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Cards Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <!-- 1. Monthly Revenue Collected -->
+          <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Collected (Nov 2026)</span>
+              <div class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+                <i data-lucide="indian-rupee" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div id="metric-monthly-revenue" class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">₹0</div>
+              <div class="mt-2 flex items-center justify-between text-xs">
+                <span id="metric-collection-pct" class="text-emerald-700 font-medium">0% Collected</span>
+                <span id="metric-total-target" class="text-slate-400">Target: ₹0</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+                <div id="metric-progress-bar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Total Pending Dues -->
+          <div onclick="switchTab('payments')" class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Pending Dues</span>
+              <div class="p-2.5 bg-amber-50 text-amber-600 rounded-xl">
+                <i data-lucide="clock" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div id="metric-pending-dues" class="text-2xl sm:text-3xl font-extrabold text-amber-600 tracking-tight">₹0</div>
+              <div class="mt-2 flex items-center justify-between text-xs">
+                <span class="text-amber-800 font-medium">Requires Verification</span>
+                <span class="text-blue-600 underline font-semibold">Track & Verify →</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Active Units (Flats & Shops) -->
+          <div onclick="switchTab('properties')" class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Active Rented Units</span>
+              <div class="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                <i data-lucide="building" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div id="metric-active-units" class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">0 units</div>
+              <div class="mt-2 flex items-center gap-2 text-xs">
+                <span id="metric-flats-badge" class="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-semibold">🏡 0 Flats</span>
+                <span id="metric-shops-badge" class="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-semibold">🏪 0 Shops</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. Unresolved Maintenance Tickets -->
+          <div onclick="switchTab('tickets')" class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition cursor-pointer">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Maintenance Tickets</span>
+              <div class="p-2.5 bg-rose-50 text-rose-600 rounded-xl">
+                <i data-lucide="wrench" class="w-5 h-5"></i>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div id="metric-unresolved-issues" class="text-2xl sm:text-3xl font-extrabold text-rose-600 tracking-tight">0 open</div>
+              <div class="mt-2 flex items-center justify-between text-xs">
+                <span class="text-rose-700 font-medium">Plumbing / Shutter / Leaks</span>
+                <span class="text-blue-600 underline font-semibold">Dispatch →</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Automated 3-Day Reminders Teaser -->
+        <div class="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-3xl p-6 text-white shadow-lg">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 text-xs font-bold border border-blue-400/30 mb-2">
+                <i data-lucide="bell" class="w-3.5 h-3.5"></i> Rent Due in ≤ 3 Days
+              </span>
+              <h2 class="text-2xl font-black">1-Click WhatsApp Reminders Ready</h2>
+              <p class="text-xs sm:text-sm text-blue-200 mt-1 max-w-xl">
+                The engine has calculated which tenants have rent due in 3 days. Send personalized, pre-filled WhatsApp messages with a single tap.
+              </p>
+            </div>
+            <button onclick="switchTab('reminders')" class="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl text-xs sm:text-sm shadow-md transition self-start md:self-auto">
+              Launch Reminder Engine →
+            </button>
+          </div>
+        </div>
+
+        <!-- Recent Transactions Preview -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="font-bold text-slate-900 text-base">Recent Rent Collections & Approvals</h3>
+            <button onclick="switchTab('payments')" class="text-xs font-semibold text-blue-600 hover:underline">
+              View All Payments →
+            </button>
+          </div>
+          <div id="overview-recent-payments-table"></div>
+        </div>
+      </div>
+
+      <!-- SECTION: PROPERTIES TAB -->
+      <div id="section-properties" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Properties & Active Tenants</h2>
+            <p class="text-xs sm:text-sm text-slate-500">Manage flats and commercial shops owned by you and your father.</p>
+          </div>
+          <button onclick="openAddPropertyModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-blue-500/20 transition">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Unit (Flat / Shop)
+          </button>
+        </div>
+        <div id="properties-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+      </div>
+
+      <!-- SECTION: PAYMENT TRACKER TAB -->
+      <div id="section-payments" class="hidden space-y-6">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-bold text-slate-900">Payment Tracker & Audit Log</h2>
+              <p class="text-xs sm:text-sm text-slate-500">Confirm cash in hand or verify UPI UTR reference codes.</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="inline-flex rounded-lg bg-slate-100 p-1 text-xs font-medium">
+                <button onclick="setPaymentFilter('All')" id="btn-payfilter-all" class="px-3 py-1.5 rounded-md bg-white text-slate-900 font-bold shadow-sm">All</button>
+                <button onclick="setPaymentFilter('Pending')" id="btn-payfilter-pending" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">Pending</button>
+                <button onclick="setPaymentFilter('Verified')" id="btn-payfilter-verified" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900">Verified</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div id="payment-tracker-table"></div>
+        </div>
+      </div>
+
+      <!-- SECTION: 3-DAY REMINDERS TAB -->
+      <div id="section-reminders" class="hidden space-y-6">
+        <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-6 rounded-3xl shadow-md">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 text-xs font-bold border border-blue-400/30 mb-2">
+            <i data-lucide="bell" class="w-3.5 h-3.5"></i> Automated 3-Day Engine
+          </span>
+          <h2 class="text-2xl font-black">Pre-filled Rent Reminders</h2>
+          <p class="text-xs sm:text-sm text-blue-200 mt-1 max-w-2xl">
+            Tenants whose rent is due within 3 days, due today, or overdue are automatically prioritized here. Click "Send WhatsApp" to launch WhatsApp with a pre-filled message including UPI payment links.
+          </p>
+        </div>
+        <div id="reminders-list-container" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+      </div>
+
+      <!-- SECTION: MAINTENANCE TICKETS TAB -->
+      <div id="section-tickets" class="hidden space-y-6">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900">Maintenance Tickets Manager</h2>
+            <p class="text-xs sm:text-sm text-slate-500">Track and dispatch plumbing, electrical, shutter, and seepage complaints.</p>
+          </div>
+          <div class="inline-flex rounded-lg bg-slate-100 p-1 text-xs font-medium">
+            <button onclick="setTicketFilter('All')" id="btn-ticketfilter-all" class="px-3 py-1.5 rounded-md bg-white text-slate-900 font-bold shadow-sm">All</button>
+            <button onclick="setTicketFilter('Pending')" id="btn-ticketfilter-pending" class="px-3 py-1.5 rounded-md text-slate-600">Pending</button>
+            <button onclick="setTicketFilter('In Progress')" id="btn-ticketfilter-inprogress" class="px-3 py-1.5 rounded-md text-slate-600">In Progress</button>
+            <button onclick="setTicketFilter('Resolved')" id="btn-ticketfilter-resolved" class="px-3 py-1.5 rounded-md text-slate-600">Resolved</button>
+          </div>
+        </div>
+        <div id="tickets-grid-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+      </div>
+
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- VIEW 2: TENANT SELF-SERVICE PORTAL                       -->
+    <!-- ======================================================== -->
+    <div id="tenant-view" class="hidden max-w-4xl mx-auto space-y-6">
+      <!-- Tenant Switcher Simulator -->
+      <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-slate-500 uppercase">Tenant Account:</span>
+          <select id="tenant-selector" onchange="onTenantChanged()" class="text-xs sm:text-sm font-bold text-slate-900 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          </select>
+        </div>
+        <div id="tenant-logged-phone" class="text-xs text-slate-500 font-medium"></div>
+      </div>
+
+      <!-- Unit Banner -->
+      <div class="bg-gradient-to-br from-slate-900 via-indigo-950 to-blue-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div>
+            <span id="tenant-unit-badge" class="inline-block px-3 py-1 rounded-full bg-blue-500/20 text-blue-200 text-xs font-bold border border-blue-400/30 mb-2">
+              Residential Flat
+            </span>
+            <h1 id="tenant-unit-title" class="text-3xl font-black">Flat 101</h1>
+            <p id="tenant-unit-subtitle" class="text-sm text-blue-200 mt-1">Tenant: Rahul Sharma</p>
+          </div>
+
+          <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/15 sm:text-right">
+            <span class="text-xs uppercase tracking-wider text-blue-200 font-semibold block">Monthly Rent</span>
+            <div id="tenant-rent-amount" class="text-3xl font-black text-amber-300">₹18,000</div>
+            <span id="tenant-rent-due-label" class="text-xs text-blue-100 block mt-1">Due on: 5th of every month</span>
+          </div>
+        </div>
+
+        <!-- Tenant Tabs -->
+        <div class="mt-8 flex space-x-2 border-t border-white/10 pt-4">
+          <button onclick="switchTenantSubTab('pay')" id="btn-tenant-pay" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-slate-900 shadow-md flex items-center gap-2">
+            <i data-lucide="credit-card" class="w-4 h-4 text-blue-600"></i> Pay Rent (UPI / Cash)
+          </button>
+          <button onclick="switchTenantSubTab('receipts')" id="btn-tenant-receipts" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-blue-100 hover:bg-white/10 flex items-center gap-2">
+            <i data-lucide="file-text" class="w-4 h-4 text-emerald-400"></i> Receipts
+          </button>
+          <button onclick="switchTenantSubTab('issues')" id="btn-tenant-issues" class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-blue-100 hover:bg-white/10 flex items-center gap-2">
+            <i data-lucide="wrench" class="w-4 h-4 text-amber-400"></i> Report Issue
+          </button>
+        </div>
+      </div>
+
+      <!-- Tenant Sub Tab 1: Pay Rent -->
+      <div id="tenant-tab-pay" class="space-y-6">
+        <!-- Success Alert banner -->
+        <div id="tenant-pay-alert" class="hidden p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs sm:text-sm flex items-center gap-3">
+          <i data-lucide="check-circle-2" class="w-5 h-5 text-emerald-600 shrink-0"></i>
+          <span id="tenant-pay-alert-text">Payment submitted!</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Dynamic UPI QR Code -->
+          <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm flex flex-col items-center text-center">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 text-xs font-bold border border-purple-200 mb-3">
+              <i data-lucide="qr-code" class="w-3.5 h-3.5"></i> Dynamic UPI QR Code
+            </span>
+            <h2 class="text-lg font-bold text-slate-900">Scan to Pay with Any UPI App</h2>
+            <p id="tenant-qr-amount-desc" class="text-xs text-slate-500 mb-4">
+              Exact rent amount is embedded in the QR.
+            </p>
+
+            <div class="p-3 bg-white rounded-2xl border-2 border-slate-900 shadow-md inline-block mb-3">
+              <img id="tenant-upi-qr-img" src="" alt="UPI QR" class="w-48 h-48 rounded-lg" />
+            </div>
+
+            <div class="text-[11px] font-mono text-slate-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 mb-4">
+              UPI ID: <strong>landlord.father@upi</strong>
+            </div>
+
+            <!-- Deep Links -->
+            <div class="w-full space-y-2">
+              <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider block">Or Open In App:</span>
+              <div class="grid grid-cols-3 gap-2">
+                <a id="link-gpay" href="#" class="p-2.5 rounded-xl border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 text-center transition">
+                  <span class="text-blue-600 font-extrabold text-sm block">GPay</span>
+                  <span class="text-[10px] text-slate-500">Google Pay</span>
+                </a>
+                <a id="link-phonepe" href="#" class="p-2.5 rounded-xl border border-slate-200 hover:border-purple-500 hover:bg-purple-50/50 text-center transition">
+                  <span class="text-purple-600 font-extrabold text-sm block">PhonePe</span>
+                  <span class="text-[10px] text-slate-500">PhonePe</span>
+                </a>
+                <a id="link-paytm" href="#" class="p-2.5 rounded-xl border border-slate-200 hover:border-sky-500 hover:bg-sky-50/50 text-center transition">
+                  <span class="text-sky-600 font-extrabold text-sm block">Paytm</span>
+                  <span class="text-[10px] text-slate-500">Paytm UPI</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- UTR Submission & Cash Hand-over Alert -->
+          <div class="space-y-6">
+            <!-- 1. Verify UPI UTR -->
+            <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm">
+              <h3 class="text-base font-bold text-slate-900 mb-1">Paid via UPI?</h3>
+              <p class="text-xs text-slate-500 mb-4">
+                Enter your 12-digit UPI UTR / Bank Reference Number to log your payment for verification.
+              </p>
+              <form onsubmit="handleTenantUpiSubmit(event)" class="space-y-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-700 mb-1">UPI UTR / Reference ID</label>
+                  <input type="text" id="tenant-utr-input" required placeholder="e.g. 983719283741" class="w-full px-3 py-2 text-xs sm:text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-purple-500/20 transition flex items-center justify-center gap-2">
+                  <i data-lucide="check" class="w-4 h-4"></i> Submit UPI Verification
+                </button>
+              </form>
+            </div>
+
+            <!-- 2. "Paid via Cash" Notification Button -->
+            <div class="bg-emerald-50/50 border border-emerald-200/80 rounded-3xl p-6">
+              <div class="flex items-center gap-2 text-emerald-900 font-bold text-base mb-1">
+                <i data-lucide="banknote" class="w-5 h-5 text-emerald-600"></i>
+                <span>Paying Cash in Hand?</span>
+              </div>
+              <p class="text-xs text-emerald-700 mb-4">
+                Click below to instantly alert the Landlord and Father that you are handing over cash in person so they can collect it and generate your receipt.
+              </p>
+              <button type="button" onclick="handleTenantCashAlert()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-500/20 transition flex items-center justify-center gap-2">
+                <i data-lucide="send" class="w-4 h-4"></i> "Paid via Cash" Notification Button
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tenant Sub Tab 2: Receipts -->
+      <div id="tenant-tab-receipts" class="hidden bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900">Your Verified Rent Receipts</h2>
+          <p class="text-xs sm:text-sm text-slate-500">Official digital receipts with transaction stamp and verification details.</p>
+        </div>
+        <div id="tenant-receipts-list"></div>
+      </div>
+
+      <!-- Tenant Sub Tab 3: Report Issues -->
+      <div id="tenant-tab-issues" class="hidden space-y-6">
+        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm">
+          <h2 class="text-xl font-bold text-slate-900 mb-1">Report Maintenance Issue</h2>
+          <p class="text-xs sm:text-sm text-slate-500 mb-4">Submit plumbing, electrical, shutter, or leakage issues directly to the Landlord.</p>
+          <div id="tenant-issue-success" class="hidden mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs sm:text-sm">
+            Ticket submitted successfully! The Landlord has been notified.
+          </div>
+          <form onsubmit="handleTenantIssueSubmit(event)" class="space-y-4 text-xs sm:text-sm">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Category *</label>
+                <select id="issue-category" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="Plumbing">Plumbing (Tap, Leak, Drain)</option>
+                  <option value="Electrical">Electrical (Wiring, Switch, Light)</option>
+                  <option value="Shutter">Shutter / Door Jammed</option>
+                  <option value="Leaks">Water Seepage / Roof Leak</option>
+                  <option value="Structural">Structural / Civil Repairs</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-700 mb-1">Priority *</label>
+                <select id="issue-priority" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 bg-white">
+                  <option value="Low">Low - Can be fixed later</option>
+                  <option value="High" selected>High - Daily routine affected</option>
+                  <option value="Urgent">Urgent - Emergency / Leakage</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Issue Title *</label>
+              <input type="text" id="issue-title" required placeholder="e.g. Washroom tap leaking or shop shutter stuck" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Details & Location *</label>
+              <textarea id="issue-desc" required rows="3" placeholder="Describe the problem..." class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500"></textarea>
+            </div>
+            <button type="submit" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md transition">
+              Submit Maintenance Ticket
+            </button>
+          </form>
+        </div>
+        <div class="bg-white rounded-3xl border border-slate-200/80 p-6 shadow-sm space-y-3">
+          <h3 class="font-bold text-slate-900 text-sm">Your Reported Maintenance History</h3>
+          <div id="tenant-issue-history-list" class="divide-y divide-slate-100"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 1: ADD PROPERTY MODAL                              -->
+  <!-- ======================================================== -->
+  <div id="modal-add-property" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+        <h3 class="text-lg font-bold text-slate-900">Add New Unit (Flat / Shop)</h3>
+        <button onclick="closeAddPropertyModal()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form onsubmit="handleCreateProperty(event)" class="space-y-4 text-xs sm:text-sm">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Unit Code *</label>
+            <input type="text" id="prop-unit-code" required placeholder="e.g. Flat 301 or Shop 04" class="w-full px-3 py-2 border border-slate-200 rounded-lg">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Unit Type *</label>
+            <select id="prop-unit-type" class="w-full px-3 py-2 border border-slate-200 rounded-lg bg-white">
+              <option value="Flat">Residential Flat</option>
+              <option value="Shop">Commercial Shop</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-2">
+            <label class="block font-semibold text-slate-700 mb-1">Rent Amount (₹) *</label>
+            <input type="number" id="prop-rent-amount" required min="1" placeholder="20000" class="w-full px-3 py-2 border border-slate-200 rounded-lg">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Due Day *</label>
+            <input type="number" id="prop-due-day" required min="1" max="31" value="5" class="w-full px-3 py-2 border border-slate-200 rounded-lg">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Security Deposit (₹)</label>
+            <input type="number" id="prop-security-deposit" placeholder="40000" class="w-full px-3 py-2 border border-slate-200 rounded-lg">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">Building</label>
+            <input type="text" id="prop-building" value="Shanti Niwas Complex" class="w-full px-3 py-2 border border-slate-200 rounded-lg">
+          </div>
+        </div>
+        <div class="border-t border-slate-100 pt-3">
+          <h4 class="font-bold text-slate-800 mb-2">Tenant Details (Optional)</h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Tenant Name</label>
+              <input type="text" id="prop-tenant-name" placeholder="Ramesh Patel" class="w-full px-3 py-2 border border-slate-200 rounded-lg">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Tenant Phone</label>
+              <input type="text" id="prop-tenant-phone" placeholder="+919876543210" class="w-full px-3 py-2 border border-slate-200 rounded-lg">
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="closeAddPropertyModal()" class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600">Cancel</button>
+          <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg">Save Unit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 2: PRINTABLE RECEIPT MODAL                         -->
+  <!-- ======================================================== -->
+  <div id="modal-receipt-container" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div id="printable-receipt-modal" class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100 no-print">
+        <span class="font-bold text-slate-800 text-sm flex items-center gap-2">
+          <i data-lucide="shield-check" class="w-5 h-5 text-blue-600"></i> Official Rent Receipt
+        </span>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print / Save PDF
+          </button>
+          <button onclick="closeReceiptModal()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      <div id="receipt-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL 3: SUPABASE CLOUD DATABASE CONFIGURATION           -->
+  <!-- ======================================================== -->
+  <div id="modal-supabase" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="p-2 rounded-xl bg-emerald-50 text-emerald-600">
+            <i data-lucide="cloud" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">Supabase Cloud Database</h3>
+            <p class="text-xs text-slate-500">Permanent cloud PostgreSQL persistence for flats, payments & tickets</p>
+          </div>
+        </div>
+        <button onclick="closeSupabaseModal()" class="p-1 rounded-lg text-slate-400 hover:bg-slate-100">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Current Connection Banner -->
+      <div id="supabase-modal-status-card" class="mb-5 p-4 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-slate-500 font-medium">Database Engine:</span>
+          <span id="supabase-modal-db-badge" class="font-bold px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-800">Checking...</span>
+        </div>
+        <div id="supabase-modal-url-row" class="mt-2 text-slate-600 truncate hidden">
+          Endpoint: <code id="supabase-modal-url-text" class="bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-800 font-mono text-xs"></code>
+        </div>
+      </div>
+
+      <!-- Credentials Form -->
+      <form onsubmit="handleSaveSupabaseConfig(event)" class="space-y-4 text-xs sm:text-sm">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">
+            Supabase Project URL *
+          </label>
+          <input
+            type="url"
+            id="cfg-supabase-url"
+            required
+            placeholder="https://your-project-id.supabase.co"
+            class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 font-mono text-xs sm:text-sm"
+          >
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">
+            Supabase API Key (anon / public or service_role) *
+          </label>
+          <input
+            type="password"
+            id="cfg-supabase-key"
+            required
+            placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+            class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 font-mono text-xs sm:text-sm"
+          >
+          <p class="text-[11px] text-slate-400 mt-1">Found in your Supabase Dashboard ➔ Project Settings ➔ API</p>
+        </div>
+
+        <!-- Feedback Alert -->
+        <div id="supabase-modal-alert" class="hidden p-3 rounded-xl text-xs sm:text-sm"></div>
+
+        <div class="flex items-center justify-between pt-2">
+          <button
+            type="button"
+            onclick="copySchemaToClipboard()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold text-xs transition"
+          >
+            <i data-lucide="copy" class="w-3.5 h-3.5 text-blue-600"></i>
+            <span id="copy-schema-btn-text">Copy SQL Schema</span>
+          </button>
+
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              onclick="closeSupabaseModal()"
+              class="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-semibold text-xs hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              id="btn-save-supabase"
+              class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-500/20 transition flex items-center gap-2"
+            >
+              <i data-lucide="cloud" class="w-4 h-4"></i>
+              <span>Connect & Save Cloud</span>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Quick 3-step Instructions -->
+      <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-500 space-y-1.5 bg-slate-50 p-4 rounded-2xl">
+        <h4 class="font-bold text-slate-800">Quick 3-Step Setup for Supabase:</h4>
+        <ol class="list-decimal list-inside space-y-1">
+          <li>Create a free account and project at <a href="https://supabase.com" target="_blank" class="text-blue-600 underline font-semibold">supabase.com</a>.</li>
+          <li>Open your Supabase <strong>SQL Editor</strong>, click <strong>"Copy SQL Schema"</strong> above, paste and run it.</li>
+          <li>Paste your <strong>Project URL</strong> & <strong>API Key</strong> above and click <strong>"Connect & Save Cloud"</strong>.</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- JAVASCRIPT STATE & APPLICATION ENGINE                    -->
+  <!-- ======================================================== -->
+  <script>
+    // State variables
+    let currentRole = 'landlord'; // 'landlord' or 'tenant'
+    let currentTab = 'overview';
+    let currentTenantSubTab = 'pay';
+    let paymentFilter = 'All';
+    let ticketFilter = 'All';
+
+    let appData = {
+      overview: {},
+      properties: [],
+      tenants: [],
+      payments: [],
+      issues: [],
+      reminders: []
+    };
+
+    let selectedTenantId = '';
+
+    // Number to Indian Words Helper
+    function numberToWords(num) {
+      const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+      const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+      function inWords(n) {
+        if (n === 0) return '';
+        let str = '';
+        if (Math.floor(n / 10000000) > 0) { str += inWords(Math.floor(n / 10000000)) + 'Crore '; n %= 10000000; }
+        if (Math.floor(n / 100000) > 0) { str += inWords(Math.floor(n / 100000)) + 'Lakh '; n %= 100000; }
+        if (Math.floor(n / 1000) > 0) { str += inWords(Math.floor(n / 1000)) + 'Thousand '; n %= 1000; }
+        if (Math.floor(n / 100) > 0) { str += inWords(Math.floor(n / 100)) + 'Hundred '; n %= 100; }
+        if (n > 0) {
+          if (n < 20) str += a[n];
+          else str += b[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + a[n % 10] : ' ');
+        }
+        return str;
+      }
+      const words = inWords(Math.floor(num)).trim();
+      return words ? `Rupees ${words} Only` : 'Rupees Zero Only';
+    }
+
+    function formatCurrency(val) {
+      return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+    }
+
+    // Fetch all application data from server
+    async function fetchAppData() {
+      try {
+        const [ovRes, propRes, tenRes, payRes, issRes, remRes] = await Promise.all([
+          fetch('/api/overview').then(r => r.json()),
+          fetch('/api/properties').then(r => r.json()),
+          fetch('/api/tenants').then(r => r.json()),
+          fetch('/api/payments').then(r => r.json()),
+          fetch('/api/issues').then(r => r.json()),
+          fetch('/api/reminders').then(r => r.json()),
+        ]);
+
+        appData.overview = ovRes;
+        appData.properties = propRes;
+        appData.tenants = tenRes;
+        appData.payments = payRes;
+        appData.issues = issRes;
+        appData.reminders = remRes;
+
+        if (!selectedTenantId && appData.tenants.length > 0) {
+          selectedTenantId = appData.tenants[0].id;
+        }
+
+        renderAll();
+      } catch (err) {
+        console.error('Failed to load application data:', err);
+      }
+    }
+
+    // Role toggle
+    function toggleRoleMode() {
+      currentRole = currentRole === 'landlord' ? 'tenant' : 'landlord';
+      const rolePill = document.getElementById('role-pill');
+      const toggleBtnText = document.getElementById('toggle-role-btn-text');
+      const landlordSubnav = document.getElementById('landlord-subnav');
+      const landlordView = document.getElementById('landlord-view');
+      const tenantView = document.getElementById('tenant-view');
+
+      if (currentRole === 'landlord') {
+        rolePill.innerText = 'Landlord & Father';
+        rolePill.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30';
+        toggleBtnText.innerText = 'Switch to Tenant Portal';
+        landlordSubnav.classList.remove('hidden');
+        landlordView.classList.remove('hidden');
+        tenantView.classList.add('hidden');
+      } else {
+        rolePill.innerText = 'Tenant Portal';
+        rolePill.className = 'text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        toggleBtnText.innerText = 'Switch to Landlord Dashboard';
+        landlordSubnav.classList.add('hidden');
+        landlordView.classList.add('hidden');
+        tenantView.classList.remove('hidden');
+        updateTenantView();
+      }
+      lucide.createIcons();
+    }
+
+    // Landlord Tab Switcher
+    function switchTab(tab) {
+      currentTab = tab;
+      const tabs = ['overview', 'properties', 'payments', 'reminders', 'tickets'];
+      tabs.forEach(t => {
+        const sec = document.getElementById(`section-${t}`);
+        const btn = document.getElementById(`tab-${t}-btn`);
+        if (t === tab) {
+          sec.classList.remove('hidden');
+          btn.className = 'px-3 py-1.5 rounded-md flex items-center gap-1.5 bg-blue-600 text-white font-semibold transition';
+        } else {
+          sec.classList.add('hidden');
+          btn.className = 'px-3 py-1.5 rounded-md flex items-center gap-1.5 text-slate-300 hover:text-white hover:bg-slate-800 transition';
+        }
+      });
+      lucide.createIcons();
+    }
+
+    // Tenant Sub Tab Switcher
+    function switchTenantSubTab(subTab) {
+      currentTenantSubTab = subTab;
+      ['pay', 'receipts', 'issues'].forEach(st => {
+        const div = document.getElementById(`tenant-tab-${st}`);
+        const btn = document.getElementById(`btn-tenant-${st}`);
+        if (st === subTab) {
+          div.classList.remove('hidden');
+          btn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-white text-slate-900 shadow-md flex items-center gap-2';
+        } else {
+          div.classList.add('hidden');
+          btn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-blue-100 hover:bg-white/10 flex items-center gap-2';
+        }
+      });
+      lucide.createIcons();
+    }
+
+    // Render All Views
+    function renderAll() {
+      renderOverview();
+      renderProperties();
+      renderPayments();
+      renderReminders();
+      renderTickets();
+      populateTenantSelector();
+      updateTenantView();
+      lucide.createIcons();
+    }
+
+    // 1. Render Overview
+    function renderOverview() {
+      const ov = appData.overview;
+      document.getElementById('metric-monthly-revenue').innerText = formatCurrency(ov.monthlyRevenue || 0);
+      document.getElementById('metric-pending-dues').innerText = formatCurrency(ov.pendingDues || 0);
+      document.getElementById('metric-active-units').innerText = `${ov.totalActiveUnits || 0} units`;
+      document.getElementById('metric-flats-badge').innerText = `🏡 ${ov.flatsCount || 0} Flats`;
+      document.getElementById('metric-shops-badge').innerText = `🏪 ${ov.shopsCount || 0} Shops`;
+      document.getElementById('metric-unresolved-issues').innerText = `${ov.unresolvedTickets || 0} open`;
+
+      const totalTarget = (ov.monthlyRevenue || 0) + (ov.pendingDues || 0);
+      const pct = totalTarget > 0 ? Math.round((ov.monthlyRevenue / totalTarget) * 100) : 0;
+      document.getElementById('metric-collection-pct').innerText = `${pct}% Collected`;
+      document.getElementById('metric-total-target').innerText = `Target: ${formatCurrency(totalTarget)}`;
+      document.getElementById('metric-progress-bar').style.width = `${pct}%`;
+
+      // Badges in header
+      const dueSoonCount = appData.reminders.filter(r => r.urgency === 'due_in_3_days' || r.urgency === 'due_today').length;
+      const remBadge = document.getElementById('badge-reminders-count');
+      if (dueSoonCount > 0) {
+        remBadge.innerText = dueSoonCount;
+        remBadge.classList.remove('hidden');
+      } else {
+        remBadge.classList.add('hidden');
+      }
+
+      const ticketBadge = document.getElementById('badge-tickets-count');
+      if (ov.unresolvedTickets > 0) {
+        ticketBadge.innerText = ov.unresolvedTickets;
+        ticketBadge.classList.remove('hidden');
+      } else {
+        ticketBadge.classList.add('hidden');
+      }
+
+      // Recent 3 payments on overview
+      const recent = appData.payments.slice(0, 3);
+      const tableHtml = `
+        <table class="w-full text-left text-xs sm:text-sm">
+          <tbody class="divide-y divide-slate-100">
+            ${recent.map(p => `
+              <tr class="hover:bg-slate-50">
+                <td class="py-2.5 font-bold text-slate-900">${p.unit_code}</td>
+                <td class="py-2.5 text-slate-600">${p.tenant_name}</td>
+                <td class="py-2.5 font-black text-slate-900">${formatCurrency(p.amount)}</td>
+                <td class="py-2.5">
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold ${p.status === 'Verified' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">${p.status}</span>
+                </td>
+                <td class="py-2.5 text-right">
+                  ${p.status === 'Pending' ? `
+                    <button onclick="confirmCash('${p.id}', 'Landlord')" class="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700">Confirm</button>
+                  ` : `
+                    <button onclick="viewReceipt('${p.id}')" class="px-2.5 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-medium hover:bg-slate-200">Receipt</button>
+                  `}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+      document.getElementById('overview-recent-payments-table').innerHTML = tableHtml;
+    }
+
+    // 2. Render Properties
+    function renderProperties() {
+      const grid = document.getElementById('properties-grid');
+      grid.innerHTML = appData.properties.map(p => `
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between">
+              <div>
+                <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider mb-2 ${p.unit_type === 'Flat' ? 'bg-blue-50 text-blue-700' : 'bg-indigo-50 text-indigo-700'}">
+                  ${p.unit_type === 'Flat' ? '🏡 Residential Flat' : '🏪 Commercial Shop'}
+                </span>
+                <h3 class="text-lg font-bold text-slate-900">${p.unit_code}</h3>
+                <p class="text-xs text-slate-500">${p.building_name || 'Shanti Niwas'}</p>
+              </div>
+              <div class="text-right">
+                <span class="text-lg font-black text-slate-900">${formatCurrency(p.rent_amount)}</span>
+                <span class="block text-[11px] text-slate-400">/ month</span>
+              </div>
+            </div>
+            <div class="mt-4 grid grid-cols-2 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <div>Due: <strong>${p.due_day}th</strong> of month</div>
+              <div>Deposit: <strong>${formatCurrency(p.security_deposit || 0)}</strong></div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100">
+              ${p.tenant_name ? `
+                <div class="flex items-center justify-between text-xs font-semibold text-slate-800">
+                  <span class="text-emerald-600">✓ Occupied</span>
+                  <span>${p.tenant_name}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+                  <span>${p.tenant_phone || ''}</span>
+                  <a href="https://wa.me/${(p.tenant_phone||'').replace(/\D/g,'')}" target="_blank" class="text-emerald-600 font-bold hover:underline">WhatsApp</a>
+                </div>
+              ` : `
+                <div class="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg font-semibold text-center">Vacant Unit</div>
+              `}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 3. Render Payments
+    function renderPayments() {
+      const container = document.getElementById('payment-tracker-table');
+      const filtered = appData.payments.filter(p => {
+        if (paymentFilter !== 'All' && p.status !== paymentFilter) return false;
+        return true;
+      });
+
+      container.innerHTML = `
+        <table class="w-full text-left text-xs sm:text-sm">
+          <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold text-xs uppercase">
+            <tr>
+              <th class="py-3 px-4">Date & Month</th>
+              <th class="py-3 px-4">Unit & Tenant</th>
+              <th class="py-3 px-4">Amount</th>
+              <th class="py-3 px-4">Mode & UTR</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${filtered.length === 0 ? `<tr><td colspan="6" class="py-8 text-center text-slate-400">No records found.</td></tr>` : ''}
+            ${filtered.map(p => `
+              <tr class="hover:bg-slate-50">
+                <td class="py-3.5 px-4 font-semibold text-slate-900">${p.date}<div class="text-[11px] text-slate-400 font-normal">${p.month}</div></td>
+                <td class="py-3.5 px-4 font-bold text-slate-900">${p.unit_code}<div class="text-xs text-slate-600 font-normal">${p.tenant_name}</div></td>
+                <td class="py-3.5 px-4 font-black text-slate-900">${formatCurrency(p.amount)}</td>
+                <td class="py-3.5 px-4">
+                  <span class="px-2 py-0.5 rounded text-xs font-semibold ${p.payment_method === 'UPI' ? 'bg-purple-50 text-purple-700' : 'bg-emerald-50 text-emerald-700'}">${p.payment_method}</span>
+                  <div class="text-[11px] font-mono text-slate-500 mt-0.5">${p.reference_id || ''}</div>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="px-2.5 py-1 rounded-full text-xs font-bold ${p.status === 'Verified' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">${p.status}</span>
+                  ${p.confirmed_by ? `<div class="text-[10px] text-slate-400">by ${p.confirmed_by}</div>` : ''}
+                </td>
+                <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                  ${p.status === 'Pending' ? `
+                    <button onclick="confirmCash('${p.id}', 'Landlord')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-xs shadow-sm">
+                      ${p.payment_method === 'Cash' ? 'Confirm Cash Received' : 'Verify UPI UTR'}
+                    </button>
+                    <button onclick="confirmCash('${p.id}', 'Father')" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200 ml-1">
+                      Father Verified
+                    </button>
+                  ` : `
+                    <button onclick="viewReceipt('${p.id}')" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200">
+                      Receipt (PDF)
+                    </button>
+                  `}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function setPaymentFilter(f) {
+      paymentFilter = f;
+      ['all', 'pending', 'verified'].forEach(x => {
+        const btn = document.getElementById(`btn-payfilter-${x}`);
+        if (x === f.toLowerCase()) {
+          btn.className = 'px-3 py-1.5 rounded-md bg-white text-slate-900 font-bold shadow-sm';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900';
+        }
+      });
+      renderPayments();
+    }
+
+    // 4. Render Reminders
+    function renderReminders() {
+      const container = document.getElementById('reminders-list-container');
+      container.innerHTML = appData.reminders.map(r => {
+        let badgeStyle = 'bg-blue-50 text-blue-700 border-blue-200';
+        let label = `Due in ${r.daysRemaining} days`;
+        if (r.urgency === 'due_today') {
+          badgeStyle = 'bg-amber-100 text-amber-800 border-amber-300 font-bold animate-pulse';
+          label = 'DUE TODAY';
+        } else if (r.urgency === 'overdue') {
+          badgeStyle = 'bg-rose-100 text-rose-800 border-rose-300 font-bold';
+          label = `OVERDUE by ${Math.abs(r.daysRemaining)} days`;
+        } else if (r.urgency === 'due_in_3_days') {
+          badgeStyle = 'bg-amber-50 text-amber-700 border-amber-200 font-bold';
+          label = `Due in ${r.daysRemaining} days (3-Day Alert)`;
+        }
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+            <div>
+              <div class="flex items-start justify-between">
+                <div>
+                  <span class="inline-block px-2.5 py-0.5 rounded-full text-xs border mb-2 ${badgeStyle}">${label}</span>
+                  <h3 class="text-base font-bold text-slate-900">${r.tenant_name}</h3>
+                  <p class="text-xs text-slate-500">${r.unit_code} (${r.unit_type}) • ${r.tenant_phone}</p>
+                </div>
+                <div class="text-right">
+                  <span class="text-lg font-black text-slate-900">${formatCurrency(r.rent_amount)}</span>
+                  <span class="block text-[11px] text-slate-400">Due ${r.due_day}th</span>
+                </div>
+              </div>
+              <div class="mt-3 bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs text-slate-600 italic">
+                "${r.messageText.replace(/\n+/g, ' ')}"
+              </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <a href="${r.smsUrl}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 font-medium text-xs hover:bg-slate-50">SMS</a>
+              <a href="${r.whatsappUrl}" target="_blank" class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i> Send WhatsApp
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // 5. Render Tickets
+    function renderTickets() {
+      const container = document.getElementById('tickets-grid-container');
+      const filtered = appData.issues.filter(i => {
+        if (ticketFilter !== 'All' && i.status !== ticketFilter) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="col-span-full py-8 text-center text-slate-400">No maintenance tickets matching filter.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => `
+        <div class="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-800 text-xs font-bold">${t.category}</span>
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${t.priority === 'Urgent' ? 'bg-rose-100 text-rose-700' : t.priority === 'High' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}">${t.priority} Priority</span>
+            </div>
+            <h3 class="font-bold text-slate-900 text-base mb-1">${t.title}</h3>
+            <p class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3">${t.description}</p>
+            <div class="text-xs text-slate-500 mb-4">Unit: <strong>${t.unit_code}</strong> • Tenant: ${t.tenant_name}</div>
+          </div>
+          <div class="pt-3 border-t border-slate-100">
+            <span class="block text-[11px] font-bold text-slate-400 uppercase mb-1">Status:</span>
+            <div class="grid grid-cols-3 gap-1.5 text-xs">
+              <button onclick="updateTicketStatus('${t.id}', 'Pending')" class="py-1 rounded font-bold ${t.status === 'Pending' ? 'bg-amber-500 text-white' : 'bg-slate-100 text-slate-700'}">Pending</button>
+              <button onclick="updateTicketStatus('${t.id}', 'In Progress')" class="py-1 rounded font-bold ${t.status === 'In Progress' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}">In Progress</button>
+              <button onclick="updateTicketStatus('${t.id}', 'Resolved')" class="py-1 rounded font-bold ${t.status === 'Resolved' ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}">Resolved</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function setTicketFilter(f) {
+      ticketFilter = f;
+      ['all', 'pending', 'inprogress', 'resolved'].forEach(x => {
+        const btn = document.getElementById(`btn-ticketfilter-${x}`);
+        if (x === f.toLowerCase().replace(' ', '')) {
+          btn.className = 'px-3 py-1.5 rounded-md bg-white text-slate-900 font-bold shadow-sm';
+        } else {
+          btn.className = 'px-3 py-1.5 rounded-md text-slate-600';
+        }
+      });
+      renderTickets();
+    }
+
+    // Populate tenant switcher
+    function populateTenantSelector() {
+      const sel = document.getElementById('tenant-selector');
+      sel.innerHTML = appData.tenants.map(t => `
+        <option value="${t.id}" ${t.id === selectedTenantId ? 'selected' : ''}>
+          ${t.name} (${t.unit_code} - ${t.unit_type})
+        </option>
+      `).join('');
+    }
+
+    function onTenantChanged() {
+      selectedTenantId = document.getElementById('tenant-selector').value;
+      updateTenantView();
+    }
+
+    // Update Tenant View content
+    function updateTenantView() {
+      const activeTenant = appData.tenants.find(t => t.id === selectedTenantId) || appData.tenants[0];
+      if (!activeTenant) return;
+
+      document.getElementById('tenant-logged-phone').innerText = `Registered: ${activeTenant.phone}`;
+      document.getElementById('tenant-unit-badge').innerText = activeTenant.unit_type === 'Flat' ? 'Residential Flat' : 'Commercial Shop';
+      document.getElementById('tenant-unit-title').innerText = activeTenant.unit_code;
+      document.getElementById('tenant-unit-subtitle').innerText = `Tenant: ${activeTenant.name}`;
+      document.getElementById('tenant-rent-amount').innerText = formatCurrency(activeTenant.rent_amount);
+      document.getElementById('tenant-rent-due-label').innerText = `Due on: ${activeTenant.due_day}th of every month`;
+      document.getElementById('tenant-qr-amount-desc').innerText = `Exact rent of ${formatCurrency(activeTenant.rent_amount)} is embedded.`;
+
+      // Build UPI links
+      const upiUrl = `upi://pay?pa=landlord.father@upi&pn=Landlord%20Father&am=${activeTenant.rent_amount}&cu=INR&tn=Rent%20${activeTenant.unit_code}`;
+      const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(upiUrl)}`;
+      document.getElementById('tenant-upi-qr-img').src = qrApiUrl;
+
+      document.getElementById('link-gpay').href = `gpay://upi/pay?pa=landlord.father@upi&pn=Landlord%20Father&am=${activeTenant.rent_amount}&cu=INR&tn=Rent%20${activeTenant.unit_code}`;
+      document.getElementById('link-phonepe').href = `phonepe://pay?pa=landlord.father@upi&pn=Landlord%20Father&am=${activeTenant.rent_amount}&cu=INR&tn=Rent%20${activeTenant.unit_code}`;
+      document.getElementById('link-paytm').href = `paytmmp://pay?pa=landlord.father@upi&pn=Landlord%20Father&am=${activeTenant.rent_amount}&cu=INR&tn=Rent%20${activeTenant.unit_code}`;
+
+      // Tenant Receipts list
+      const verified = appData.payments.filter(p => (p.tenant_id === activeTenant.id || p.unit_code === activeTenant.unit_code) && p.status === 'Verified');
+      const recList = document.getElementById('tenant-receipts-list');
+      if (verified.length === 0) {
+        recList.innerHTML = `<div class="py-6 text-center text-slate-400">No verified receipts yet. Once the Landlord confirms payment, your receipt will appear here.</div>`;
+      } else {
+        recList.innerHTML = `
+          <div class="divide-y divide-slate-100">
+            ${verified.map(v => `
+              <div class="py-3.5 flex items-center justify-between">
+                <div>
+                  <div class="font-bold text-slate-900">${v.month} <span class="text-xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">${v.receipt_number || 'RCP-VERIFIED'}</span></div>
+                  <div class="text-xs text-slate-500">${v.date} via ${v.payment_method} (${v.reference_id})</div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="font-black text-slate-900">${formatCurrency(v.amount)}</span>
+                  <button onclick="viewReceipt('${v.id}')" class="px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 font-bold text-xs hover:bg-blue-100">View Receipt</button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
+      // Tenant issue history
+      const issues = appData.issues.filter(i => i.tenant_id === activeTenant.id || i.unit_code === activeTenant.unit_code);
+      const issList = document.getElementById('tenant-issue-history-list');
+      if (issues.length === 0) {
+        issList.innerHTML = `<div class="py-4 text-center text-slate-400">No issues reported yet.</div>`;
+      } else {
+        issList.innerHTML = issues.map(i => `
+          <div class="py-3 flex items-center justify-between">
+            <div>
+              <div class="font-semibold text-slate-900 text-xs sm:text-sm">${i.title}</div>
+              <div class="text-[11px] text-slate-500">${i.category} • Priority: ${i.priority}</div>
+            </div>
+            <span class="px-2.5 py-0.5 rounded-full text-xs font-bold ${i.status === 'Resolved' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">${i.status}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    // Tenant Actions
+    async function handleTenantUpiSubmit(e) {
+      e.preventDefault();
+      const activeTenant = appData.tenants.find(t => t.id === selectedTenantId);
+      const utr = document.getElementById('tenant-utr-input').value;
+      if (!activeTenant || !utr) return;
+
+      await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          property_id: activeTenant.property_id,
+          tenant_id: activeTenant.id,
+          amount: activeTenant.rent_amount,
+          payment_method: 'UPI',
+          reference_id: utr,
+          notes: 'Submitted via Tenant Portal UPI Engine'
+        })
+      });
+
+      document.getElementById('tenant-utr-input').value = '';
+      const alert = document.getElementById('tenant-pay-alert');
+      document.getElementById('tenant-pay-alert-text').innerText = 'UPI UTR submitted! Landlord verification pending.';
+      alert.classList.remove('hidden');
+      setTimeout(() => alert.classList.add('hidden'), 5000);
+      fetchAppData();
+    }
+
+    async function handleTenantCashAlert() {
+      const activeTenant = appData.tenants.find(t => t.id === selectedTenantId);
+      if (!activeTenant) return;
+
+      await fetch('/api/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          property_id: activeTenant.property_id,
+          tenant_id: activeTenant.id,
+          amount: activeTenant.rent_amount,
+          payment_method: 'Cash',
+          reference_id: 'CASH-ALERT-HANDOVER',
+          notes: 'Tenant notified: Cash ready at unit'
+        })
+      });
+
+      const alert = document.getElementById('tenant-pay-alert');
+      document.getElementById('tenant-pay-alert-text').innerText = 'Cash hand-over notification sent to Landlord & Father!';
+      alert.classList.remove('hidden');
+      setTimeout(() => alert.classList.add('hidden'), 5000);
+      fetchAppData();
+    }
+
+    async function handleTenantIssueSubmit(e) {
+      e.preventDefault();
+      const activeTenant = appData.tenants.find(t => t.id === selectedTenantId);
+      if (!activeTenant) return;
+
+      await fetch('/api/issues', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          property_id: activeTenant.property_id,
+          tenant_id: activeTenant.id,
+          category: document.getElementById('issue-category').value,
+          priority: document.getElementById('issue-priority').value,
+          title: document.getElementById('issue-title').value,
+          description: document.getElementById('issue-desc').value
+        })
+      });
+
+      document.getElementById('issue-title').value = '';
+      document.getElementById('issue-desc').value = '';
+      const succ = document.getElementById('tenant-issue-success');
+      succ.classList.remove('hidden');
+      setTimeout(() => succ.classList.add('hidden'), 5000);
+      fetchAppData();
+    }
+
+    // Landlord Actions
+    async function confirmCash(paymentId, confirmedBy) {
+      await fetch('/api/payments/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_id: paymentId, confirmed_by: confirmedBy })
+      });
+      fetchAppData();
+    }
+
+    async function updateTicketStatus(issueId, newStatus) {
+      await fetch(`/api/issues/${issueId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      fetchAppData();
+    }
+
+    function openAddPropertyModal() {
+      document.getElementById('modal-add-property').classList.remove('hidden');
+    }
+
+    function closeAddPropertyModal() {
+      document.getElementById('modal-add-property').classList.add('hidden');
+    }
+
+    async function handleCreateProperty(e) {
+      e.preventDefault();
+      const unit_code = document.getElementById('prop-unit-code').value;
+      const unit_type = document.getElementById('prop-unit-type').value;
+      const rent_amount = document.getElementById('prop-rent-amount').value;
+      const due_day = document.getElementById('prop-due-day').value;
+      const security_deposit = document.getElementById('prop-security-deposit').value;
+      const building_name = document.getElementById('prop-building').value;
+      const tenant_name = document.getElementById('prop-tenant-name').value;
+      const tenant_phone = document.getElementById('prop-tenant-phone').value;
+
+      await fetch('/api/properties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          unit_code,
+          unit_type,
+          rent_amount,
+          due_day,
+          security_deposit,
+          building_name,
+          tenant_name,
+          tenant_phone
+        })
+      });
+
+      closeAddPropertyModal();
+      fetchAppData();
+    }
+
+    // View Receipt Modal
+    function viewReceipt(paymentId) {
+      const p = appData.payments.find(x => x.id === paymentId);
+      if (!p) return;
+
+      const receiptNo = p.receipt_number || `RCP-202611-${p.id.slice(0,6).toUpperCase()}`;
+      const amountWords = numberToWords(p.amount);
+      const formattedAmount = formatCurrency(p.amount);
+
+      const html = `
+        <div class="border-2 border-slate-900 rounded-2xl p-6 sm:p-8 bg-white relative">
+          <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b-2 border-dashed border-slate-200 pb-5 mb-5">
+            <div>
+              <h2 class="text-xl sm:text-2xl font-black text-slate-900">Shanti Niwas & Plaza Estate</h2>
+              <p class="text-xs text-slate-500">Property Owner & Landlord Management</p>
+            </div>
+            <div class="sm:text-right">
+              <div class="text-xs font-bold uppercase tracking-wider text-blue-600">RENT RECEIPT</div>
+              <div class="text-sm font-black text-slate-900">${receiptNo}</div>
+              <div class="text-xs text-slate-500">Date: ${p.date}</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 text-xs mb-5">
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Received From</span>
+              <strong class="text-sm text-slate-900 block">${p.tenant_name || 'Tenant'}</strong>
+              <span class="text-slate-500">${p.tenant_phone || ''}</span>
+            </div>
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <span class="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">Unit / Premises</span>
+              <strong class="text-sm text-slate-900 block">${p.unit_code} (${p.unit_type})</strong>
+              <span class="text-slate-500">Rent for: <strong>${p.month}</strong></span>
+            </div>
+          </div>
+          <table class="w-full text-xs mb-5">
+            <thead>
+              <tr class="border-b border-slate-200 text-slate-500 text-[11px] uppercase">
+                <th class="text-left py-2">Description</th>
+                <th class="text-left py-2">Mode</th>
+                <th class="text-left py-2">Reference / UTR</th>
+                <th class="text-right py-2">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="border-b border-slate-100 font-medium">
+                <td class="py-3 text-slate-800">Monthly Rent (${p.month})</td>
+                <td class="py-3 text-slate-800 font-bold">${p.payment_method}</td>
+                <td class="py-3 font-mono text-slate-600">${p.reference_id || 'CASH-VERIFIED'}</td>
+                <td class="py-3 text-right text-base font-black text-emerald-700">${formattedAmount}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="bg-emerald-50/60 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 mb-6 font-medium">
+            <strong>Amount in words:</strong> ${amountWords}
+          </div>
+          <div class="flex items-end justify-between pt-4 border-t border-slate-100">
+            <div>
+              <div class="inline-block px-3 py-1 rounded-lg border-2 border-emerald-600 text-emerald-700 font-black text-xs uppercase tracking-wider rotate-[-2deg]">
+                ✓ PAYMENT VERIFIED
+              </div>
+              <p class="text-[10px] text-slate-400 mt-1">Confirmed by: ${p.confirmed_by || 'Landlord'}</p>
+            </div>
+            <div class="text-right">
+              <div class="w-32 border-b border-slate-900 mb-1 ml-auto"></div>
+              <span class="text-[11px] text-slate-500 font-medium block">Authorized Signatory</span>
+              <span class="text-[10px] text-slate-400">Landlord / Father</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('receipt-modal-content').innerHTML = html;
+      document.getElementById('modal-receipt-container').classList.remove('hidden');
+    }
+
+    function closeReceiptModal() {
+      document.getElementById('modal-receipt-container').classList.add('hidden');
+    }
+
+    // Supabase Cloud Management Methods
+    let supabaseStatusData = null;
+
+    async function fetchSupabaseStatus() {
+      try {
+        const res = await fetch('/api/supabase/status');
+        const data = await res.json();
+        supabaseStatusData = data;
+
+        const pill = document.getElementById('supabase-status-pill');
+        const pillText = document.getElementById('supabase-pill-text');
+        const modalBadge = document.getElementById('supabase-modal-db-badge');
+        const modalUrlRow = document.getElementById('supabase-modal-url-row');
+        const modalUrlText = document.getElementById('supabase-modal-url-text');
+
+        if (data.cloudConnected) {
+          pill.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30 transition cursor-pointer';
+          pillText.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ☁️ Supabase Cloud Active';
+          
+          modalBadge.className = 'font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 flex items-center gap-1';
+          modalBadge.innerHTML = '✓ Supabase PostgreSQL Cloud';
+
+          if (data.url) {
+            modalUrlRow.classList.remove('hidden');
+            modalUrlText.innerText = data.url;
+            document.getElementById('cfg-supabase-url').value = data.url;
+          }
+        } else {
+          pill.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition cursor-pointer';
+          pillText.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> 💾 Local DB (Connect Cloud)';
+
+          modalBadge.className = 'font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800';
+          modalBadge.innerText = 'Local SQLite Database (Offline)';
+          modalUrlRow.classList.add('hidden');
+        }
+
+        lucide.createIcons();
+      } catch (err) {
+        console.warn('Could not fetch Supabase status:', err);
+      }
+    }
+
+    function openSupabaseModal() {
+      document.getElementById('modal-supabase').classList.remove('hidden');
+      document.getElementById('supabase-modal-alert').classList.add('hidden');
+      fetchSupabaseStatus();
+      lucide.createIcons();
+    }
+
+    function closeSupabaseModal() {
+      document.getElementById('modal-supabase').classList.add('hidden');
+    }
+
+    async function handleSaveSupabaseConfig(e) {
+      e.preventDefault();
+      const url = document.getElementById('cfg-supabase-url').value.trim();
+      const key = document.getElementById('cfg-supabase-key').value.trim();
+      const alertBox = document.getElementById('supabase-modal-alert');
+      const submitBtn = document.getElementById('btn-save-supabase');
+
+      alertBox.className = 'p-3 rounded-xl text-xs sm:text-sm bg-blue-50 border border-blue-200 text-blue-800';
+      alertBox.innerText = 'Testing connection to Supabase Cloud PostgreSQL...';
+      alertBox.classList.remove('hidden');
+      submitBtn.disabled = true;
+
+      try {
+        const resp = await fetch('/api/supabase/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, key })
+        });
+
+        const result = await resp.json();
+
+        if (resp.ok && result.success) {
+          alertBox.className = 'p-3 rounded-xl text-xs sm:text-sm bg-emerald-50 border border-emerald-200 text-emerald-900 font-semibold';
+          alertBox.innerText = '✅ ' + result.message;
+          await fetchSupabaseStatus();
+          await fetchAppData();
+          setTimeout(() => {
+            closeSupabaseModal();
+          }, 1800);
+        } else {
+          alertBox.className = 'p-3 rounded-xl text-xs sm:text-sm bg-rose-50 border border-rose-200 text-rose-900';
+          alertBox.innerText = '❌ ' + (result.error || 'Failed to connect to Supabase.');
+        }
+      } catch (err) {
+        alertBox.className = 'p-3 rounded-xl text-xs sm:text-sm bg-rose-50 border border-rose-200 text-rose-900';
+        alertBox.innerText = '❌ Error: ' + err.message;
+      } finally {
+        submitBtn.disabled = false;
+      }
+    }
+
+    async function seedSupabaseData() {
+      const btn = document.getElementById('btn-seed-cloud');
+      if (btn) btn.innerHTML = '<span>Seeding Cloud...</span>';
+      try {
+        const res = await fetch('/api/supabase/seed', { method: 'POST' });
+        const result = await res.json();
+        if (result.success) {
+          alert('✅ ' + result.message);
+          await fetchAppData();
+        } else {
+          alert('Notice: ' + (result.error || result.message));
+        }
+      } catch (err) {
+        alert('Error seeding cloud: ' + err.message);
+      } finally {
+        if (btn) btn.innerHTML = '<i data-lucide="sparkles" class="w-3.5 h-3.5"></i><span>Seed Cloud Data</span>';
+        lucide.createIcons();
+      }
+    }
+
+    async function copySchemaToClipboard() {
+      const btnText = document.getElementById('copy-schema-btn-text');
+      try {
+        const res = await fetch('/database/fix_schema.sql');
+        const sql = await res.text();
+        await navigator.clipboard.writeText(sql);
+        btnText.innerText = 'Copied SQL Script! ✓';
+        setTimeout(() => {
+          btnText.innerText = 'Copy SQL Schema';
+        }, 3000);
+      } catch (err) {
+        btnText.innerText = 'Open database/fix_schema.sql';
+      }
+    }
+
+    // Initialize application
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchSupabaseStatus();
+      fetchAppData();
+    });
+  </script>
+</body>
+</html>
